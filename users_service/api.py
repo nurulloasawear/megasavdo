@@ -1,22 +1,27 @@
-import graphene
+from  http.server import  BaseHTTPRequestHandler
+import json 
+from graphql import graphql_sync
+from users_service.schema import schema
 
-class UserType(graphene.ObjectType):
-    id = graphene.ID()
-    username = graphene.String()
-    number = graphene.String()
-USERS = [ 
-    {"id": "1", "username": "alice", "number": "1234567890"},
-    {"id": "2", "username": "bob", "number": "0987654321"},
-]
-class Query(graphene.ObjectType):
-    users = graphene.List(UserType)
-
-    def resolve_users(self, info):
-        return USERS
-    def by_id(self,info,id):
-        for user in USERS:
-            if user["id"] == id:
-                return user
-        return None
-schema = graphene.Schema(query=Query)
-    
+class GraphQLHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == "/":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.end_headers()
+            self.wfile.write(b"<html><body><h1>Users Service GraphQL API</h1></body></html>")
+        else:
+            self.send_response(404)
+            self.end_headers()
+    def do_POST(self):
+        if self.path == "/graphql":
+            length = int(self.headers.get("Content-Length"))
+            body = json.loads(self.rfile.read(length))
+            result = graphql_sync(schema, body.get("query"), variable_values=body.get("variables"))
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(result.to_dict()).encode("utf-8"))
+        else:
+            self.send_response(404)
+            self.end_headers()
