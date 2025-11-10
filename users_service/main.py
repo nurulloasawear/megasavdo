@@ -1,49 +1,17 @@
-from http.server import BaseHTTPRequestHandler, HTTPServer
-import json
-from api import schema
+import ssl
+from http.server import HTTPServer
+from api import GraphQLHandler
 
-class GraphQLHandler(BaseHTTPRequestHandler):
-    def do_POST(self):
-        content_length = int(self.headers.get('Content-Length', 0))
-        post_data = self.rfile.read(content_length).decode('utf-8')
+if __name__ == '__main__':
+    # Sertifikat yarat (bir marta)
+    import os
+    if not os.path.exists('cert.pem'):
+        os.system('openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN=localhost"')
 
-        try:
-            request_json = json.loads(post_data)
-        except json.JSONDecodeError:
-            self.send_response(400)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({'error': 'Invalid JSON format'}).encode('utf-8'))
-            return
+    server = HTTPServer(('localhost', 8443), GraphQLHandler)
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.load_cert_chain('cert.pem', 'key.pem')
+    server.socket = ctx.wrap_socket(server.socket, server_side=True)
 
-        query = request_json.get('query')
-        variables = request_json.get('variables')
-
-        if not query:
-            self.send_response(400)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps({'error': 'Missing query field'}).encode('utf-8'))
-            return
-
-        result = schema.execute(query, variables=variables)
-
-        response = {}
-        if result.errors:
-            response['errors'] = [str(error) for error in result.errors]
-        if result.data:
-            response['data'] = result.data
-
-        self.send_response(200)
-        self.send_header('Content-Type', 'application/json')
-        self.end_headers()
-        self.wfile.write(json.dumps(response).encode('utf-8'))
-
-def run(server_class=HTTPServer, handler_class=GraphQLHandler, port=8001):
-    server_address = ('', port)
-    httpd = server_class(server_address, handler_class)
-    print(f'🚀 GraphQL server running on port {port}')
-    httpd.serve_forever()
-
-if __name__ == "__main__":
-    run()
+    print("Users Service: https://localhost:8443/graphql")
+    server.serve_forever()
