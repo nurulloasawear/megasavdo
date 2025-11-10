@@ -1,7 +1,7 @@
 from  http.server import  BaseHTTPRequestHandler
 import json 
 from graphql import graphql_sync
-from users_service.schema import schema
+from schemas import schema
 
 class GraphQLHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -21,7 +21,12 @@ class GraphQLHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps(result.to_dict()).encode("utf-8"))
+            response = {}
+            if result.errors:
+                response["errors"] = [str(error) for error in result.errors]
+            if result.data:
+                response["data"] = result.data
+            self.wfile.write(json.dumps(response).encode("utf-8"))
         else:
             self.send_response(404)
             self.end_headers()
