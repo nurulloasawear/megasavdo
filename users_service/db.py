@@ -108,8 +108,29 @@ class UserDatabase:
             """, (username, name, email, phone_number, hashed, role))
             user_id = cursor.lastrowid
 
-            conn.execute("INSERT INTO loyalty (user_id) VALUES (?)", (user_id,))
+            # Avto loyalty yaratish
+            conn.execute("INSERT INTO loyalty (user_id, points, tier) VALUES (?, 0, 'bronze')", (user_id,))
             return user_id
+
+    # def get_user_by_id(self, user_id: int) -> Optional[Dict]:
+    #     with self.get_connection() as conn:
+    #         cursor = conn.cursor()
+    #         cursor.execute("""
+    #             SELECT u.*, l.points, l.tier 
+    #             FROM users u 
+    #             LEFT JOIN loyalty l ON u.id = l.user_id 
+    #             WHERE u.id = ?
+    #         """, (user_id,))
+    #         row = cursor.fetchone()
+    #         return dict(row) if row else None
+    def get_user_by_email(self, email: str) -> Optional[Dict]:
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+            row = cursor.fetchone()
+            if row:
+                return {k: row[k] for k in row.keys()}
+            return None
 
     def get_user_by_id(self, user_id: int) -> Optional[Dict]:
         with self.get_connection() as conn:
@@ -121,14 +142,7 @@ class UserDatabase:
                 WHERE u.id = ?
             """, (user_id,))
             row = cursor.fetchone()
-            return dict(row) if row else None
-
-    def get_user_by_email(self, email: str) -> Optional[Dict]:
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
-            row = cursor.fetchone()
-            return dict(row) if row else None
+            return dict(row) if row else None  # <--- dict(row)
 
     def get_all_users(self) -> List[Dict]:
         with self.get_connection() as conn:
@@ -139,7 +153,9 @@ class UserDatabase:
                 LEFT JOIN loyalty l ON u.id = l.user_id 
                 ORDER BY u.created_at DESC
             """)
-            return [dict(row) for row in cursor.fetchall()]
+            rows = cursor.fetchall()
+            print([dict(row) for row in rows])
+            return [dict(row) for row in rows]
 
     def update_user(self, user_id: int, **kwargs) -> bool:
         user = self.get_user_by_id(user_id)
