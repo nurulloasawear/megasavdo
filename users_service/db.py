@@ -28,9 +28,9 @@ class UserDatabase:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT UNIQUE NOT NULL,
+                    username TEXT UNIQUE ,
                     name TEXT NOT NULL,
-                    email TEXT UNIQUE NOT NULL,
+                    email TEXT UNIQUE ,
                     password_hash TEXT NOT NULL,
                     phone_number TEXT UNIQUE NOT NULL,
                     role TEXT NOT NULL DEFAULT 'customer' CHECK(role IN ('customer', 'admin', 'courier', 'warehouse')),
